@@ -26,9 +26,9 @@ The command installs or updates the CLI, integrates the current project, starts 
 - MCP, if added, exposes read-only catalog/status resources only.
 - SQLite stores task state, execution evidence, and audit history.
 
-## First Vertical Slice
+## Runtime Flow
 
-Submit a task, route it to Codex, stream logs, collect a structured result, run a verification command, and persist evidence.
+Chat normally in Claude Code or Codex. Project instructions activate the harness, native subagents handle independent work, hooks record lifecycle events, and the dashboard observes execution and evidence.
 
 ## Add To A Project
 
@@ -53,7 +53,7 @@ After this repository is pushed to GitHub, the same bootstrap works without clon
 npx --yes github:tinhdao0503/TinhdaoLazy add .
 ```
 
-`add` creates only `.agent-harness/project.json` inside the target project. It does not install hooks, edit `AGENTS.md`, alter MCP settings, or copy runtime code.
+`add` installs project-local harness instructions, Claude/Codex hooks, MCP settings, and project metadata. It does not copy runtime code.
 
 ## Commands
 
@@ -68,4 +68,4 @@ The add command installs project-local Claude hooks, Claude/Codex MCP settings, 
 
 Runtime state is stored in `data/harness.db`. Codex runs with `workspace-write`, no commit instruction, JSONL logs, and a required structured final result.
 
-Dashboard binds only to `http://127.0.0.1:4310`. It manages project registration, task intake, execution, cancellation, evidence, logs, and the read-only ClaudeKit catalog.
+Dashboard binds only to `http://127.0.0.1:4310`. It observes prompts, tools, subagents, evidence, logs, and the read-only ClaudeKit catalog. Primary task intake remains the normal Claude Code or Codex chat.

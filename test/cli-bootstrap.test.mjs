@@ -23,13 +23,25 @@ test('installs project config, hooks, MCP, and instructions with one command', (
   assert.equal(existsSync(configPath), true);
   assert.equal(JSON.parse(readFileSync(configPath, 'utf8')).verificationCommand, 'npm test');
   assert.match(readFileSync(join(project, '.claude', 'settings.local.json'), 'utf8'), /session-start/);
+  assert.match(readFileSync(join(project, '.claude', 'settings.local.json'), 'utf8'), /user-prompt/);
+  assert.match(readFileSync(join(project, '.cursor', 'hooks.json'), 'utf8'), /codex-subagent-start/);
   assert.match(readFileSync(join(project, '.mcp.json'), 'utf8'), /agent-harness/);
   assert.match(readFileSync(join(project, '.codex', 'config.toml'), 'utf8'), /mcp_servers\.agent-harness/);
   assert.match(readFileSync(join(project, 'AGENTS.md'), 'utf8'), /agent-harness:start/);
+  assert.match(readFileSync(join(project, 'AGENTS.md'), 'utf8'), /current chat/);
+  assert.doesNotMatch(readFileSync(join(project, 'AGENTS.md'), 'utf8'), /controlled by local dashboard/);
 
   const second = spawnSync(process.execPath, [cli, 'add', project], {
     encoding: 'utf8', env: { ...process.env, AGENT_HARNESS_HOME: home },
   });
   assert.equal(second.status, 0, second.stderr);
   assert.equal((readFileSync(join(project, 'AGENTS.md'), 'utf8').match(/agent-harness:start/g) ?? []).length, 1);
+  assert.equal((JSON.parse(readFileSync(join(project, '.claude', 'settings.local.json'), 'utf8')).hooks.UserPromptSubmit ?? []).length, 1);
+
+  const hook = spawnSync(process.execPath, [cli, 'hook', 'user-prompt'], {
+    encoding: 'utf8', input: JSON.stringify({ prompt: 'Build login with tests' }),
+    cwd: project, env: { ...process.env, AGENT_HARNESS_HOME: home },
+  });
+  assert.equal(hook.status, 0, hook.stderr);
+  assert.match(hook.stdout, /Agent Harness is active/);
 });

@@ -22,6 +22,7 @@ export function installProject(database, input) {
   writeJson(resolve(harnessDirectory, 'project.json'), config);
   const changedFiles = [];
   mergeJson(resolve(projectPath, '.claude', 'settings.local.json'), claudeSettings(), backupDirectory, changedFiles);
+  mergeJson(resolve(projectPath, '.cursor', 'hooks.json'), codexHooks(), backupDirectory, changedFiles);
   mergeJson(resolve(projectPath, '.mcp.json'), mcpSettings(projectPath), backupDirectory, changedFiles);
   mergeCodexConfig(resolve(projectPath, '.codex', 'config.toml'), backupDirectory, changedFiles);
   mergeAgents(resolve(projectPath, 'AGENTS.md'), backupDirectory, changedFiles);
@@ -34,7 +35,20 @@ function claudeSettings() {
   const command = process.platform === 'win32' ? 'agent-harness.cmd' : 'agent-harness';
   return { hooks: {
     SessionStart: [{ hooks: [{ type: 'command', command: `${command} hook session-start` }] }],
+    UserPromptSubmit: [{ hooks: [{ type: 'command', command: `${command} hook user-prompt` }] }],
+    SubagentStart: [{ hooks: [{ type: 'command', command: `${command} hook subagent-start` }] }],
+    SubagentStop: [{ hooks: [{ type: 'command', command: `${command} hook subagent-stop` }] }],
+    PostToolUse: [{ matcher: '*', hooks: [{ type: 'command', command: `${command} hook post-tool-use` }] }],
     Stop: [{ hooks: [{ type: 'command', command: `${command} hook session-stop` }] }],
+  } };
+}
+
+function codexHooks() {
+  const command = process.platform === 'win32' ? 'agent-harness.cmd' : 'agent-harness';
+  return { version: 1, hooks: {
+    subagentStart: [{ command: `${command} hook codex-subagent-start` }],
+    subagentStop: [{ command: `${command} hook codex-subagent-stop` }],
+    postToolUse: [{ command: `${command} hook codex-post-tool-use` }],
   } };
 }
 
@@ -65,10 +79,11 @@ function mergeCodexConfig(path, backupDirectory, changedFiles) {
 
 function mergeAgents(path, backupDirectory, changedFiles) {
   const existing = existsSync(path) ? readFileSync(path, 'utf8') : '';
-  if (existing.includes(startMarker)) return;
   backup(path, backupDirectory);
-  const block = `\n${startMarker}\n## Agent Harness\n\n- Read \`.agent-harness/project.json\` for project runtime settings.\n- Use Agent Harness MCP for read-only status and catalog lookup.\n- Task execution, cancellation, and verification remain controlled by local dashboard.\n${endMarker}\n`;
-  writeFileSync(path, `${existing.trimEnd()}${block}`);
+  const block = `${startMarker}\n## Agent Harness\n\n- Harness activates automatically for every non-trivial request in Claude Code or Codex. Stay in the current chat; never redirect task intake to dashboard.\n- Read \`.agent-harness/project.json\` and use Agent Harness MCP for status and role catalog.\n- Select the best role from the harness registry. Use native subagents for independent planning, implementation, testing, review, security, database, DevOps, or performance work.\n- Keep one lead agent responsible for scope, child-agent coordination, integration, verification, and final response.\n- Emit normal runtime events; project hooks record prompt, tool, and subagent lifecycle for dashboard observation.\n- Run the detected verification command before claiming completion. Dashboard is observation and control only, never primary task intake.\n${endMarker}`;
+  const managed = new RegExp(startMarker + '[\\s\\S]*?' + endMarker);
+  const content = managed.test(existing) ? existing.replace(managed, block) : `${existing.trimEnd()}\n\n${block}\n`;
+  writeFileSync(path, content);
   changedFiles.push(path);
 }
 

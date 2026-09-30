@@ -6,7 +6,7 @@ import { openDatabase } from '../src/database.mjs';
 import { listProjects } from '../src/project-registry.mjs';
 import { installProject } from '../src/project-installer.mjs';
 
-const [command = 'help', target = '.'] = process.argv.slice(2);
+const [command = 'help', target = '.', ...flags] = process.argv.slice(2);
 const home = resolve(process.env.AGENT_HARNESS_HOME ?? resolve(homedir(), '.agent-harness-local'));
 const databasePath = resolve(home, 'harness.db');
 
@@ -42,6 +42,12 @@ async function recordHook(event, args) {
   database.prepare(`
     INSERT INTO hook_events (event, project, payload_json, created_at) VALUES (?, ?, ?, ?)
   `).run(event, process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), payload || JSON.stringify({ args }), new Date().toISOString());
+  if (event === 'user-prompt' || event === 'session-start') {
+    console.log(JSON.stringify({ hookSpecificOutput: {
+      hookEventName: event === 'user-prompt' ? 'UserPromptSubmit' : 'SessionStart',
+      additionalContext: 'Agent Harness is active. Handle this request in the current chat. Select roles from the project harness, delegate independent work through native subagents, coordinate results, run verification, and use the dashboard only for observation.',
+    } }));
+  }
 }
 
 function showStatus(projectPath) {

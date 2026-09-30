@@ -17,7 +17,9 @@ Global user settings remain untouched.
 ## Hooks
 
 Hooks call `agent-harness hook <event>` and persist bounded event payloads in SQLite.
-Hooks do not execute tasks, change permissions, or inject policy.
+Claude `UserPromptSubmit` and `SessionStart` hooks inject orchestration context into the current chat.
+Subagent and tool hooks record lifecycle events. Hooks do not change permissions or execute a second competing agent process.
+Codex receives the same orchestration contract through `AGENTS.md`; project hook events are recorded when its host supports `.cursor/hooks.json`.
 
 ## MCP
 
@@ -26,7 +28,7 @@ Hooks do not execute tasks, change permissions, or inject policy.
 - `harness_status`
 - `harness_catalog`
 
-MCP cannot submit, run, cancel, retry, or modify tasks. Execution stays in the control plane.
+MCP cannot submit, run, cancel, retry, or modify tasks. Execution stays inside the active Claude Code or Codex chat.
 
 ## Agents
 
