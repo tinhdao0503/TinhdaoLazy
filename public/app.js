@@ -63,8 +63,17 @@ function renderActivity(activity) {
     <article class="activity-task">
       <header><strong>${escapeHtml(task.objective)}</strong><span class="status ${task.status}">${task.status}</span></header>
       <p>${escapeHtml(task.project)}</p>
-      <ol>${task.layers.map((layer) => `<li class="${layer.status}"><span></span><strong>${escapeHtml(layer.label)}</strong><small>${layer.status}</small></li>`).join('')}</ol>
+      <div class="activity-metrics"><span>${task.counters.agents} agents</span><span>${task.counters.commands} commands</span><span>${task.counters.active} active</span></div>
+      <div class="agent-tree">${renderAgentNode(task.tree)}</div>
+      <div class="activity-timeline">${task.timeline.map((event) => `<span title="${escapeHtml(event.createdAt)}">${escapeHtml(event.type)}</span>`).join('')}</div>
     </article>`).join('') : '<p class="empty">Chưa có task đang chạy.</p>';
+}
+
+function renderAgentNode(node) {
+  return `<div class="agent-node ${node.status} ${node.type}">
+    <div class="agent-card"><i></i><div><strong>${escapeHtml(node.label)}</strong><small>${escapeHtml(node.meta ?? node.type)}</small></div><span>${node.status}</span></div>
+    ${node.children?.length ? `<div class="agent-children">${node.children.map(renderAgentNode).join('')}</div>` : ''}
+  </div>`;
 }
 
 function renderProjects() {
