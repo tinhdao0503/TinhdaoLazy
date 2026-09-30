@@ -36,10 +36,9 @@ test('routes planning work to Claude and implementation work to Codex', () => {
 test('rejects models assigned across runtime namespaces', () => {
   assert.doesNotThrow(() => assertModelRuntime('codex', 'cx/gpt-5.6-sol'));
   assert.doesNotThrow(() => assertModelRuntime('claude', 'cc/claude-sonnet-5'));
-  assert.doesNotThrow(() => assertModelRuntime('antigravity', 'ag/gemini-3.1-pro-low'));
-  assert.throws(() => assertModelRuntime('codex', 'ag/gemini-3.1-pro-low'), /Invalid model route/);
+  assert.throws(() => assertModelRuntime('codex', 'cc/claude-sonnet-5'), /Invalid model route/);
   assert.throws(() => assertModelRuntime('claude', 'cx/gpt-5.6-sol'), /Invalid model route/);
-  assert.throws(() => assertModelRuntime('antigravity', 'cc/claude-sonnet-5'), /Invalid model route/);
+  assert.throws(() => assertModelRuntime('unknown', 'unknown/model'), /Invalid model route/);
 });
 
 test('marks running tasks interrupted after restart', () => {

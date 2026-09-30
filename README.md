@@ -1,6 +1,6 @@
 # Agent Harness Local
 
-Local multi-agent harness for Claude Code, Codex, and Antigravity.
+Local multi-agent harness for Claude Code and Codex, with OpenClaw orchestration support.
 
 ## One Command
 

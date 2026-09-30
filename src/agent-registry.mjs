@@ -20,13 +20,12 @@ const roles = [
   ['researcher', 'claude', 'cc/claude-sonnet-5'],
   ['security-reviewer', 'claude', 'cc/claude-opus-5'],
   ['tester', 'codex', 'cx/gpt-5.6-terra'],
-  ['ui-ux-designer', 'antigravity', 'ag/gemini-3.1-pro-low'],
+  ['ui-ux-designer', 'claude', 'cc/claude-sonnet-5'],
 ];
 
 const runtimes = [
   { id: 'codex', command: 'codex', execution: 'cli' },
   { id: 'claude', command: 'claude', execution: 'cli' },
-  { id: 'antigravity', command: 'antigravity', execution: 'interactive-only' },
 ];
 
 export function getAgents() {

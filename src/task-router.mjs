@@ -37,7 +37,7 @@ function matchesSignal(text, signal) {
 }
 
 export function assertModelRuntime(runtime, model) {
-  const prefixes = { codex: 'cx/', claude: 'cc/', antigravity: 'ag/' };
+  const prefixes = { codex: 'cx/', claude: 'cc/' };
   if (!prefixes[runtime] || !model?.startsWith(prefixes[runtime])) {
     throw new Error('Invalid model route: ' + model + ' cannot run on ' + runtime);
   }

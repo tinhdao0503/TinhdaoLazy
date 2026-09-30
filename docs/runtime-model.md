@@ -31,14 +31,15 @@ MCP cannot submit, run, cancel, retry, or modify tasks. Execution stays in the c
 ## Agents
 
 - Codex: implementation, debugging, refactoring, tests, databases, DevOps, performance.
-- Claude Code: requirements, architecture, planning, security review, research, knowledge curation.
-- Antigravity: interactive visual review until a stable headless interface exists.
+- Claude Code: requirements, architecture, planning, security review, research, knowledge curation, UI and visual review.
+- OpenClaw: hook-enabled orchestration, durable tasks, audit, and session memory; not a model worker.
 
 Registry contains 20 roles. Model namespaces are enforced before execution:
 
 - Codex roles use only `cx/*`.
 - Claude roles use only `cc/*`.
-- Antigravity roles use only `ag/*`.
+
+Gemini is disabled until its local TLS certificate-chain error is fixed. Hermes is disabled until hooks are configured and its pending update succeeds. OpenCode remains available for ACP/headless use but is not selected because it has no native hook command.
 
 ## Security Boundary
 
