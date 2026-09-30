@@ -7,7 +7,8 @@ import { scanClaudeKit } from './claudekit-catalog.mjs';
 import { getAgents } from './agent-registry.mjs';
 import { getTask, listEvents, listTasks, openDatabase, recoverInterruptedTasks } from './database.mjs';
 import { submitTask } from './harness.mjs';
-import { listProjects, registerProject } from './project-registry.mjs';
+import { listProjects } from './project-registry.mjs';
+import { installProject } from './project-installer.mjs';
 import { TaskSupervisor } from './task-supervisor.mjs';
 
 const rootDirectory = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -30,7 +31,7 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === 'GET' && url.pathname === '/api/agents') return json(response, 200, getAgents());
     if (request.method === 'GET' && url.pathname === '/api/projects') return json(response, 200, listProjects(database));
-    if (request.method === 'POST' && url.pathname === '/api/projects') return json(response, 201, registerProject(database, await body(request)));
+    if (request.method === 'POST' && url.pathname === '/api/projects') return json(response, 201, installProject(database, await body(request)));
     if (request.method === 'GET' && url.pathname === '/api/tasks') return json(response, 200, listTasks(database));
     if (request.method === 'POST' && url.pathname === '/api/tasks') return json(response, 201, submitTask(database, await body(request)));
     if (request.method === 'GET' && url.pathname === '/api/catalog') return json(response, 200, scanClaudeKit(claudeKitRoot));

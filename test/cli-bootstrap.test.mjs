@@ -7,7 +7,7 @@ import test from 'node:test';
 
 const cli = resolve('bin', 'agent-harness.mjs');
 
-test('adds a project with one command and detects npm verification', () => {
+test('installs project config, hooks, MCP, and instructions with one command', () => {
   const root = mkdtempSync(join(tmpdir(), 'agent-harness-cli-'));
   const project = join(root, 'sample-project');
   const home = join(root, 'home');
@@ -22,9 +22,14 @@ test('adds a project with one command and detects npm verification', () => {
   const configPath = join(project, '.agent-harness', 'project.json');
   assert.equal(existsSync(configPath), true);
   assert.equal(JSON.parse(readFileSync(configPath, 'utf8')).verificationCommand, 'npm test');
+  assert.match(readFileSync(join(project, '.claude', 'settings.local.json'), 'utf8'), /session-start/);
+  assert.match(readFileSync(join(project, '.mcp.json'), 'utf8'), /agent-harness/);
+  assert.match(readFileSync(join(project, '.codex', 'config.toml'), 'utf8'), /mcp_servers\.agent-harness/);
+  assert.match(readFileSync(join(project, 'AGENTS.md'), 'utf8'), /agent-harness:start/);
 
   const second = spawnSync(process.execPath, [cli, 'add', project], {
     encoding: 'utf8', env: { ...process.env, AGENT_HARNESS_HOME: home },
   });
   assert.equal(second.status, 0, second.stderr);
+  assert.equal((readFileSync(join(project, 'AGENTS.md'), 'utf8').match(/agent-harness:start/g) ?? []).length, 1);
 });

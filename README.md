@@ -43,13 +43,12 @@ npx --yes github:tinhdao0503/TinhdaoLazy add .
 
 ```powershell
 agent-harness add .
-agent-harness add . --integrate
 agent-harness status .
 agent-harness list
 npm run web
 ```
 
-The integration flag generates reviewed Claude hook, MCP, and Codex instruction adapters under `.agent-harness/integrations/`. It never silently merges them into existing agent settings. See `docs/runtime-model.md`.
+The add command installs project-local Claude hooks, Claude/Codex MCP settings, and a managed `AGENTS.md` block. Existing files are backed up under `.agent-harness/backups/`. See `docs/runtime-model.md`.
 
 Runtime state is stored in `data/harness.db`. Codex runs with `workspace-write`, no commit instruction, JSONL logs, and a required structured final result.
 

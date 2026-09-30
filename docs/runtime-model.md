@@ -8,17 +8,11 @@ State lives under `~/.agent-harness-local/harness.db` unless `AGENT_HARNESS_HOME
 
 ## Project Bootstrap
 
-`agent-harness add .` creates `.agent-harness/project.json` and registers the project centrally.
-It does not alter editor, agent, hook, MCP, or global settings.
-
-`agent-harness add . --integrate` also creates reviewed adapter files under
-`.agent-harness/integrations/`:
-
-- `claude-settings.json`: Claude Code SessionStart and Stop hook bridge.
-- `mcp.json`: read-only MCP server configuration.
-- `AGENTS.snippet.md`: Codex instruction snippet.
-
-These files are generated but not silently merged into existing user configuration.
+`agent-harness add .` performs full project-local installation and registers the project centrally.
+It creates `.agent-harness/project.json`, merges Claude hooks into `.claude/settings.local.json`,
+adds project MCP configuration to `.mcp.json` and `.codex/config.toml`, and appends a managed
+Agent Harness block to `AGENTS.md`. Existing files are backed up under `.agent-harness/backups/`.
+Global user settings remain untouched.
 
 ## Hooks
 

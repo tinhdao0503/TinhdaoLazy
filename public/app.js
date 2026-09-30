@@ -5,7 +5,7 @@ elements['project-form'].addEventListener('submit', async (event) => {
   event.preventDefault();
   await api('/api/projects', { method: 'POST', body: { name: elements['project-name'].value, path: elements['project-path'].value } });
   event.target.reset();
-  toast('Đã đăng ký project');
+  toast('Đã cài settings, hooks và MCP vào project');
   await refresh();
 });
 
