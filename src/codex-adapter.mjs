@@ -13,7 +13,10 @@ export async function executeCodex(task, options) {
     '--output-schema', schemaPath, '--output-last-message', resultPath,
     '--cd', task.project, buildPrompt(task),
   ];
-  const execution = await runProcess(options.codexCommand ?? 'codex', args, {
+  const invocation = options.codexCommand
+    ? { command: options.codexCommand, args }
+    : codexInvocation(args);
+  const execution = await runProcess(invocation.command, invocation.args, {
     cwd: task.project,
     onStdout: options.onLog,
     onStderr: options.onLog,
@@ -24,6 +27,12 @@ export async function executeCodex(task, options) {
     throw new Error(`Codex exited with code ${execution.exitCode}: ${execution.stderr.trim()}`);
   }
   return JSON.parse(readFileSync(resultPath, 'utf8'));
+}
+
+function codexInvocation(args) {
+  if (process.platform !== 'win32') return { command: 'codex', args };
+  const entry = join(process.env.APPDATA, 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
+  return { command: process.execPath, args: [entry, ...args] };
 }
 
 function buildPrompt(task) {

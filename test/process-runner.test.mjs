@@ -17,3 +17,9 @@ test('times out a running process', async () => {
     /timed out/,
   );
 });
+
+test('closes child stdin when no input is provided', async () => {
+  const result = await runProcess(process.execPath, ['-e', "process.stdin.on('end', () => console.log('closed')); process.stdin.resume()"]);
+  assert.equal(result.exitCode, 0);
+  assert.match(result.stdout, /closed/);
+});

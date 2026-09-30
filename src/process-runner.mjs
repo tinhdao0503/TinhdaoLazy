@@ -8,6 +8,8 @@ export function runProcess(command, args, options = {}) {
       shell: options.shell ?? false,
       windowsHide: true,
     });
+    if (options.stdin !== undefined) child.stdin?.end(options.stdin);
+    else child.stdin?.end();
     let stdout = '';
     let stderr = '';
     let settled = false;

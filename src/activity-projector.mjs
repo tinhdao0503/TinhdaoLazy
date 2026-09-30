@@ -25,8 +25,15 @@ function extractChildren(event) {
   return text.split(/\r?\n/).flatMap((line) => {
     try {
       const value = JSON.parse(line);
-      const label = value.agent_name ?? value.agent ?? value.subagent ?? value.tool_name ?? value.tool;
-      return label ? [String(label)] : [];
+      const item = value.item ?? value;
+      const labels = [];
+      const label = item.agent_name ?? item.agent ?? item.subagent ?? item.tool_name ?? item.tool;
+      if (label) labels.push(String(label));
+      if (item.type === 'collab_tool_call') {
+        labels.push(...(item.receiver_thread_ids ?? []).map((id) => `subagent ${String(id).slice(0, 8)}`));
+      }
+      if (item.type === 'command_execution') labels.push('command execution');
+      return labels;
     } catch {
       return [];
     }

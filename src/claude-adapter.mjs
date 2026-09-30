@@ -12,7 +12,10 @@ export async function executeClaude(task, options) {
     '--allowedTools', 'Read,Edit,Write,Bash,Glob,Grep',
     buildPrompt(task),
   ];
-  const execution = await runProcess(options.claudeCommand ?? 'claude', args, {
+  const invocation = options.claudeCommand
+    ? { command: options.claudeCommand, args }
+    : claudeInvocation(args);
+  const execution = await runProcess(invocation.command, invocation.args, {
     cwd: task.project,
     onStdout: options.onLog,
     onStderr: options.onLog,
@@ -23,6 +26,12 @@ export async function executeClaude(task, options) {
     throw new Error(`Claude exited with code ${execution.exitCode}: ${execution.stderr.trim()}`);
   }
   return parseClaudeResult(execution.stdout);
+}
+
+function claudeInvocation(args) {
+  if (process.platform !== 'win32') return { command: 'claude', args };
+  const executable = join(process.env.APPDATA, 'npm', 'node_modules', '@anthropic-ai', 'claude-code', 'bin', 'claude.exe');
+  return { command: executable, args };
 }
 
 function parseClaudeResult(stdout) {
