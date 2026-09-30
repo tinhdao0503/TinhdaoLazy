@@ -10,6 +10,7 @@ import { submitTask } from './harness.mjs';
 import { listProjects } from './project-registry.mjs';
 import { installProject } from './project-installer.mjs';
 import { TaskSupervisor } from './task-supervisor.mjs';
+import { projectActivity } from './activity-projector.mjs';
 
 const rootDirectory = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const publicDirectory = resolve(rootDirectory, 'public');
@@ -33,6 +34,7 @@ const server = createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/api/projects') return json(response, 200, listProjects(database));
     if (request.method === 'POST' && url.pathname === '/api/projects') return json(response, 201, installProject(database, await body(request)));
     if (request.method === 'GET' && url.pathname === '/api/tasks') return json(response, 200, listTasks(database));
+    if (request.method === 'GET' && url.pathname === '/api/activity') return json(response, 200, projectActivity(listTasks(database), (id) => listEvents(database, id)));
     if (request.method === 'POST' && url.pathname === '/api/tasks') return json(response, 201, submitTask(database, await body(request)));
     if (request.method === 'GET' && url.pathname === '/api/catalog') return json(response, 200, scanClaudeKit(claudeKitRoot));
 
@@ -72,7 +74,7 @@ async function body(request) {
 }
 
 function staticFile(response, pathname) {
-  const files = { '/': 'index.html', '/app.css': 'app.css', '/app.js': 'app.js' };
+  const files = { '/': 'index.html', '/app.css': 'app.css', '/app.js': 'app.js', '/harness-sequence.html': 'harness-sequence.html' };
   const name = files[pathname];
   if (!name) return json(response, 404, { error: 'Not found' });
   const contentTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };

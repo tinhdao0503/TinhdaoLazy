@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Luồng điều phối Agent Harness",
+    "output": "public/harness-sequence.html",
+    "viewBox": [1080, 980],
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "views": [
+      { "id": "install", "label": "Cài harness", "focus": ["project", "dashboard", "ledger"], "note": "Project được tích hợp settings, hooks và MCP trước khi chạy task." },
+      { "id": "route", "label": "Route task", "focus": ["dashboard", "supervisor", "router", "primary"], "note": "Router chọn Claude hoặc Codex theo loại công việc và tình trạng CLI." },
+      { "id": "agents", "label": "Agent đang hoạt động", "focus": ["primary", "children", "verification"], "note": "Log JSONL và tool events cho biết agent chính, tool hoặc agent con đang thực thi." },
+      { "id": "evidence", "label": "Xác minh kết quả", "focus": ["verification", "ledger", "dashboard"], "note": "Task chỉ hoàn tất sau verification evidence và trạng thái được lưu." }
+    ]
+  },
+  "participants": [
+    { "id": "project", "type": "external", "label": "Project", "sublabel": "source + config" },
+    { "id": "dashboard", "type": "frontend", "label": "Dashboard", "sublabel": "operator view" },
+    { "id": "supervisor", "type": "backend", "label": "Supervisor", "sublabel": "queue + process" },
+    { "id": "router", "type": "backend", "label": "Task Router", "sublabel": "auto selection" },
+    { "id": "primary", "type": "cloud", "label": "Agent chính", "sublabel": "Claude / Codex" },
+    { "id": "children", "type": "messagebus", "label": "Agent con", "sublabel": "tools + JSONL" },
+    { "id": "verification", "type": "security", "label": "Verification", "sublabel": "tests + evidence" },
+    { "id": "ledger", "type": "database", "label": "SQLite Ledger", "sublabel": "state + events" }
+  ],
+  "segments": [
+    { "from": 150, "to": 310, "label": "Bootstrap project" },
+    { "from": 326, "to": 610, "label": "Route và thực thi" },
+    { "from": 626, "to": 858, "label": "Xác minh và quan sát" }
+  ],
+  "messages": [
+    { "id": "installRequest", "from": "project", "to": "dashboard", "y": 180, "label": "POST /api/projects", "variant": "emphasis", "note": "Một click cài harness vào project." },
+    { "id": "mergeConfig", "from": "dashboard", "to": "project", "y": 224, "label": "merge hooks + MCP + AGENTS.md", "variant": "security" },
+    { "id": "registerProject", "from": "dashboard", "to": "ledger", "y": 268, "label": "register project + install state", "variant": "emphasis" },
+    { "id": "submitTask", "from": "project", "to": "dashboard", "y": 352, "label": "submit objective + verification", "variant": "emphasis" },
+    { "id": "queueTask", "from": "dashboard", "to": "supervisor", "y": 396, "label": "queue / run / cancel", "variant": "default" },
+    { "id": "classifyTask", "from": "supervisor", "to": "router", "y": 440, "label": "objective + agent health", "variant": "default" },
+    { "id": "selectAgent", "from": "router", "to": "primary", "y": 484, "label": "select Claude hoặc Codex", "variant": "emphasis" },
+    { "id": "executeTask", "from": "primary", "to": "project", "y": 528, "label": "read / edit / command", "variant": "security" },
+    { "id": "childActivity", "from": "primary", "to": "children", "y": 572, "label": "tool calls + subagent events", "variant": "dashed", "note": "Chỉ hiển thị agent con khi CLI phát event tương ứng." },
+    { "id": "streamEvents", "from": "children", "to": "ledger", "y": 650, "label": "stream JSONL activity", "variant": "dashed" },
+    { "id": "verify", "from": "supervisor", "to": "verification", "y": 694, "label": "run verification command", "variant": "emphasis" },
+    { "id": "evidence", "from": "verification", "to": "ledger", "y": 738, "label": "exit code + evidence", "variant": "security" },
+    { "id": "status", "from": "ledger", "to": "dashboard", "y": 782, "label": "task state + active layers", "variant": "return" },
+    { "id": "monitor", "from": "dashboard", "to": "project", "y": 826, "label": "completed / failed / needs input", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "dashboard", "from": 174, "to": 310, "type": "frontend" },
+    { "participant": "supervisor", "from": 390, "to": 746, "type": "backend" },
+    { "participant": "router", "from": 434, "to": 492, "type": "backend" },
+    { "participant": "primary", "from": 478, "to": 616, "type": "cloud" },
+    { "participant": "children", "from": 566, "to": 658, "type": "messagebus" },
+    { "participant": "verification", "from": 688, "to": 746, "type": "security" },
+    { "participant": "ledger", "from": 262, "to": 790, "type": "database" },
+    { "participant": "dashboard", "from": 776, "to": 834, "type": "frontend" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Lớp điều phối", "items": ["Dashboard chỉ gửi ý định và lệnh vận hành", "Supervisor sở hữu process, timeout và cancel", "Router ghi lý do chọn Claude hoặc Codex"] },
+    { "dot": "violet", "title": "Lớp Agent", "items": ["Agent chính là process CLI đang chạy", "Tool và agent con xuất hiện từ event stream", "Không suy đoán agent con nếu CLI không phát telemetry"] },
+    { "dot": "emerald", "title": "Lớp bằng chứng", "items": ["Verification chạy sau implementation", "SQLite giữ task, event và exit code", "Dashboard đọc ledger để hiển thị trạng thái cuối"] }
+  ]
+}

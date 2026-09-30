@@ -1,5 +1,5 @@
 const state = { tasks: [], projects: [], selectedTask: null, running: [] };
-const elements = Object.fromEntries(['health','task-count','running-count','skill-count','project-form','project-name','project-path','task-form','task-project','task-agent','task-objective','task-verify','task-list','task-detail','event-log','refresh','toast'].map((id) => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(['health','task-count','running-count','skill-count','project-form','project-name','project-path','task-form','task-project','task-agent','task-objective','task-verify','task-list','task-detail','event-log','activity-list','refresh','toast'].map((id) => [id, document.getElementById(id)]));
 
 elements['project-form'].addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -38,8 +38,8 @@ elements['task-list'].addEventListener('click', async (event) => {
 
 async function refresh() {
   try {
-    const [status, projects, tasks, catalog] = await Promise.all([
-      api('/api/status'), api('/api/projects'), api('/api/tasks'), api('/api/catalog'),
+    const [status, projects, tasks, catalog, activity] = await Promise.all([
+      api('/api/status'), api('/api/projects'), api('/api/tasks'), api('/api/catalog'), api('/api/activity'),
     ]);
     Object.assign(state, { projects, tasks, running: status.running });
     elements.health.classList.add('ok');
@@ -49,12 +49,22 @@ async function refresh() {
     elements['skill-count'].textContent = catalog.skills.length;
     renderProjects();
     renderTasks();
+    renderActivity(activity);
     if (state.selectedTask) await renderDetail(state.selectedTask);
   } catch (error) {
     elements.health.classList.remove('ok');
     elements.health.lastChild.textContent = 'Offline';
     toast(error.message);
   }
+}
+
+function renderActivity(activity) {
+  elements['activity-list'].innerHTML = activity.length ? activity.map((task) => `
+    <article class="activity-task">
+      <header><strong>${escapeHtml(task.objective)}</strong><span class="status ${task.status}">${task.status}</span></header>
+      <p>${escapeHtml(task.project)}</p>
+      <ol>${task.layers.map((layer) => `<li class="${layer.status}"><span></span><strong>${escapeHtml(layer.label)}</strong><small>${layer.status}</small></li>`).join('')}</ol>
+    </article>`).join('') : '<p class="empty">Chưa có task đang chạy.</p>';
 }
 
 function renderProjects() {
