@@ -1,18 +1,24 @@
 import { spawnSync } from 'node:child_process';
 
 const roles = [
+  ['architect', 'claude', 'cc/claude-opus-5'],
   ['brainstormer', 'claude', 'cc/claude-opus-5'],
   ['code-reviewer', 'claude', 'cc/claude-opus-5'],
   ['code-simplifier', 'codex', 'cx/gpt-5.6-sol'],
   ['debugger', 'codex', 'cx/gpt-5.6-sol'],
+  ['database-specialist', 'codex', 'cx/gpt-5.6-sol'],
+  ['devops-engineer', 'codex', 'cx/gpt-5.6-terra'],
   ['docs-manager', 'claude', 'cc/claude-fable-5-1'],
   ['fullstack-developer', 'codex', 'cx/gpt-5.6-sol'],
   ['git-manager', 'codex', 'cx/gpt-5.6-luna'],
   ['journal-writer', 'claude', 'cc/claude-fable-5-1'],
   ['mcp-manager', 'codex', 'cx/gpt-5.6-terra'],
   ['planner', 'claude', 'cc/claude-opus-5'],
+  ['performance-engineer', 'codex', 'cx/gpt-5.6-sol'],
   ['project-manager', 'claude', 'cc/claude-fable-5-1'],
+  ['requirements-analyst', 'claude', 'cc/claude-sonnet-5'],
   ['researcher', 'claude', 'cc/claude-sonnet-5'],
+  ['security-reviewer', 'claude', 'cc/claude-opus-5'],
   ['tester', 'codex', 'cx/gpt-5.6-terra'],
   ['ui-ux-designer', 'antigravity', 'ag/gemini-3.1-pro-low'],
 ];

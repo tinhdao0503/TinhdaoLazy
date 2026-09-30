@@ -8,7 +8,13 @@ import { submitTask } from '../src/harness.mjs';
 import { assertModelRuntime, routeTask } from '../src/task-router.mjs';
 
 const agents = [
+  { id: 'architect', runtime: 'claude', model: 'cc/claude-opus-5', available: true, execution: 'cli' },
+  { id: 'database-specialist', runtime: 'codex', model: 'cx/gpt-5.6-sol', available: true, execution: 'cli' },
+  { id: 'devops-engineer', runtime: 'codex', model: 'cx/gpt-5.6-terra', available: true, execution: 'cli' },
+  { id: 'performance-engineer', runtime: 'codex', model: 'cx/gpt-5.6-sol', available: true, execution: 'cli' },
   { id: 'planner', runtime: 'claude', model: 'cc/claude-opus-5', available: true, execution: 'cli' },
+  { id: 'requirements-analyst', runtime: 'claude', model: 'cc/claude-sonnet-5', available: true, execution: 'cli' },
+  { id: 'security-reviewer', runtime: 'claude', model: 'cc/claude-opus-5', available: true, execution: 'cli' },
   { id: 'debugger', runtime: 'codex', model: 'cx/gpt-5.6-sol', available: true, execution: 'cli' },
   { id: 'tester', runtime: 'codex', model: 'cx/gpt-5.6-terra', available: true, execution: 'cli' },
   { id: 'fullstack-developer', runtime: 'codex', model: 'cx/gpt-5.6-sol', available: true, execution: 'cli' },
@@ -19,6 +25,12 @@ test('routes planning work to Claude and implementation work to Codex', () => {
   assert.equal(routeTask('Fix failing authentication test', agents).agent, 'codex');
   assert.equal(routeTask('Plan API architecture', agents).model, 'cc/claude-opus-5');
   assert.equal(routeTask('Fix failing authentication test', agents).role, 'tester');
+  assert.equal(routeTask('Design scalable system architecture', agents).role, 'architect');
+  assert.equal(routeTask('Review OWASP security threats', agents).role, 'security-reviewer');
+  assert.equal(routeTask('Optimize database query latency', agents).role, 'database-specialist');
+  assert.equal(routeTask('Build Docker deployment pipeline', agents).role, 'devops-engineer');
+  assert.equal(routeTask('Profile CPU and memory leak', agents).role, 'performance-engineer');
+  assert.equal(routeTask('Define user story acceptance criteria', agents).role, 'requirements-analyst');
 });
 
 test('rejects models assigned across runtime namespaces', () => {

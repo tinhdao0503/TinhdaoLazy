@@ -30,9 +30,15 @@ MCP cannot submit, run, cancel, retry, or modify tasks. Execution stays in the c
 
 ## Agents
 
-- Codex: implementation, debugging, refactoring, tests.
-- Claude Code: specification, planning, review, knowledge curation.
+- Codex: implementation, debugging, refactoring, tests, databases, DevOps, performance.
+- Claude Code: requirements, architecture, planning, security review, research, knowledge curation.
 - Antigravity: interactive visual review until a stable headless interface exists.
+
+Registry contains 20 roles. Model namespaces are enforced before execution:
+
+- Codex roles use only `cx/*`.
+- Claude roles use only `cc/*`.
+- Antigravity roles use only `ag/*`.
 
 ## Security Boundary
 
