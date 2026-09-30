@@ -15,8 +15,7 @@ const routes = [
 ];
 
 export function routeTask(objective, agents) {
-  const text = objective.toLowerCase();
-  const requestedRole = routes.find((route) => route.signals.some((signal) => matchesSignal(text, signal)))?.role ?? 'fullstack-developer';
+  const requestedRole = selectRole(objective);
   const preferred = agents.find((agent) => agent.id === requestedRole && agent.available && agent.execution === 'cli');
   const fallback = agents.find((agent) => agent.id === 'fullstack-developer' && agent.available)
     ?? agents.find((agent) => agent.available && agent.execution === 'cli');
@@ -29,6 +28,11 @@ export function routeTask(objective, agents) {
     model: selected.model,
     reason: preferred ? 'Matched ' + selected.id + ' task profile' : requestedRole + ' unavailable; used ' + selected.id,
   };
+}
+
+export function selectRole(objective) {
+  const text = objective.toLowerCase();
+  return routes.find((route) => route.signals.some((signal) => matchesSignal(text, signal)))?.role ?? 'fullstack-developer';
 }
 
 function matchesSignal(text, signal) {

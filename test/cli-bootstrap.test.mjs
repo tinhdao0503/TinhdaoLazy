@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { listEvents, listTasks, openDatabase } from '../src/database.mjs';
 
 const cli = resolve('bin', 'agent-harness.mjs');
 
@@ -39,9 +40,28 @@ test('installs project config, hooks, MCP, and instructions with one command', (
   assert.equal((JSON.parse(readFileSync(join(project, '.claude', 'settings.local.json'), 'utf8')).hooks.UserPromptSubmit ?? []).length, 1);
 
   const hook = spawnSync(process.execPath, [cli, 'hook', 'user-prompt'], {
-    encoding: 'utf8', input: JSON.stringify({ prompt: 'Build login with tests' }),
+    encoding: 'utf8', input: JSON.stringify({ session_id: 'session-test', cwd: project, model: 'claude-sonnet-5', prompt: 'Build login with tests and security review using subagents' }),
     cwd: project, env: { ...process.env, AGENT_HARNESS_HOME: home },
   });
   assert.equal(hook.status, 0, hook.stderr);
-  assert.match(hook.stdout, /Agent Harness is active/);
+  assert.match(hook.stdout, /mandatory orchestration/);
+
+  for (const [event, payload] of [
+    ['subagent-start', { session_id: 'session-test', cwd: project, agent_type: 'tester' }],
+    ['post-tool-use', { session_id: 'session-test', cwd: project, tool_name: 'Bash' }],
+    ['session-stop', { session_id: 'session-test', cwd: project }],
+  ]) {
+    const lifecycle = spawnSync(process.execPath, [cli, 'hook', event], {
+      encoding: 'utf8', input: JSON.stringify(payload), cwd: project, env: { ...process.env, AGENT_HARNESS_HOME: home },
+    });
+    assert.equal(lifecycle.status, 0, lifecycle.stderr);
+  }
+
+  const database = openDatabase(join(home, 'harness.db'));
+  const [task] = listTasks(database);
+  assert.equal(task.status, 'completed');
+  assert.equal(task.role, 'security-reviewer');
+  assert.equal(task.agent, 'claude');
+  assert.ok(listEvents(database, task.id).some((event) => event.type === 'subagent-start'));
+  assert.ok(listEvents(database, task.id).some((event) => event.type === 'log'));
 });

@@ -41,6 +41,13 @@ export function openDatabase(path) {
       payload_json TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS chat_sessions (
+      session_id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      project TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
   `);
   addColumn(database, 'tasks', 'role', 'TEXT');
   addColumn(database, 'tasks', 'model', 'TEXT');
@@ -138,6 +145,17 @@ export function appendEvent(database, taskId, type, payload) {
   database.prepare(`
     INSERT INTO events (task_id, type, payload_json, created_at) VALUES (?, ?, ?, ?)
   `).run(taskId, type, JSON.stringify(payload), new Date().toISOString());
+}
+
+export function bindChatSession(database, sessionId, taskId, project) {
+  database.prepare(`
+    INSERT INTO chat_sessions (session_id, task_id, project, updated_at) VALUES (?, ?, ?, ?)
+    ON CONFLICT(session_id) DO UPDATE SET task_id = excluded.task_id, project = excluded.project, updated_at = excluded.updated_at
+  `).run(sessionId, taskId, project, new Date().toISOString());
+}
+
+export function getChatSessionTask(database, sessionId) {
+  return database.prepare('SELECT task_id FROM chat_sessions WHERE session_id = ?').get(sessionId)?.task_id ?? null;
 }
 
 export function listEvents(database, taskId) {

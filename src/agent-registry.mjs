@@ -28,6 +28,10 @@ const runtimes = [
   { id: 'claude', command: 'claude', execution: 'cli' },
 ];
 
+export function getAgentDefinitions() {
+  return roles.map(([id, runtime, model]) => ({ id, runtime, model, available: true, execution: 'cli' }));
+}
+
 export function getAgents() {
   const availability = new Map(runtimes.map((runtime) => {
     const probe = spawnSync(runtime.command, ['--version'], { encoding: 'utf8', windowsHide: true, shell: true, timeout: 5_000 });

@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { openDatabase } from '../src/database.mjs';
+import { appendEvent, bindChatSession, getChatSessionTask, openDatabase, saveTask, updateTask } from '../src/database.mjs';
 import { listProjects } from '../src/project-registry.mjs';
 import { installProject } from '../src/project-installer.mjs';
+import { selectRole } from '../src/task-router.mjs';
 
 const [command = 'help', target = '.', ...flags] = process.argv.slice(2);
 const home = resolve(process.env.AGENT_HARNESS_HOME ?? resolve(homedir(), '.agent-harness-local'));
@@ -39,15 +41,63 @@ async function recordHook(event, args) {
   for await (const chunk of process.stdin) chunks.push(chunk);
   const payload = Buffer.concat(chunks).subarray(0, 65_536).toString('utf8');
   const database = openDatabase(databasePath);
+  const value = parsePayload(payload);
+  const project = value.cwd ?? process.env.CLAUDE_PROJECT_DIR ?? process.cwd();
+  const sessionId = value.session_id ?? value.sessionId;
   database.prepare(`
     INSERT INTO hook_events (event, project, payload_json, created_at) VALUES (?, ?, ?, ?)
-  `).run(event, process.env.CLAUDE_PROJECT_DIR ?? process.cwd(), payload || JSON.stringify({ args }), new Date().toISOString());
+  `).run(event, project, payload || JSON.stringify({ args }), new Date().toISOString());
+  if (event === 'user-prompt' && sessionId) startChatTask(database, sessionId, project, value);
+  else if (sessionId) recordChatLifecycle(database, sessionId, event, value);
   if (event === 'user-prompt' || event === 'session-start') {
+    const role = event === 'user-prompt' ? selectRole(value.prompt ?? '') : 'lead-agent';
+    const contract = event === 'user-prompt' ? orchestrationContract(value.prompt ?? '', role) : 'Agent Harness is active for this session.';
     console.log(JSON.stringify({ hookSpecificOutput: {
       hookEventName: event === 'user-prompt' ? 'UserPromptSubmit' : 'SessionStart',
-      additionalContext: 'Agent Harness is active. Handle this request in the current chat. Select roles from the project harness, delegate independent work through native subagents, coordinate results, run verification, and use the dashboard only for observation.',
+      additionalContext: contract,
     } }));
   }
+}
+
+function parsePayload(payload) {
+  try { return payload ? JSON.parse(payload) : {}; } catch { return {}; }
+}
+
+function startChatTask(database, sessionId, project, payload) {
+  const previous = getChatSessionTask(database, sessionId);
+  if (previous) updateTask(database, previous, 'completed', { source: 'chat', reason: 'Superseded by next prompt' });
+  const timestamp = new Date().toISOString();
+  const role = selectRole(payload.prompt ?? '');
+  const rawModel = payload.model ?? 'claude-sonnet-5';
+  const model = rawModel.startsWith('cc/') ? rawModel : 'cc/' + rawModel;
+  const task = { id: 'chat-' + randomUUID(), project, objective: payload.prompt ?? 'Claude chat request', agent: 'claude', role, model, status: 'running', verificationCommand: null, createdAt: timestamp, updatedAt: timestamp };
+  saveTask(database, task);
+  bindChatSession(database, sessionId, task.id, project);
+  appendEvent(database, task.id, 'submitted', { source: 'chat-hook', sessionId, agent: task.agent, role, model });
+  appendEvent(database, task.id, 'started', { source: 'chat-hook', sessionId, agent: task.agent, role, model });
+}
+
+function recordChatLifecycle(database, sessionId, event, payload) {
+  const taskId = getChatSessionTask(database, sessionId);
+  if (!taskId) return;
+  appendEvent(database, taskId, event, { tool: payload.tool_name, agent: payload.agent_type ?? payload.agent_name, status: payload.status });
+  if (event === 'post-tool-use') appendEvent(database, taskId, 'log', { text: JSON.stringify({ item: { type: 'command_execution', command: payload.tool_name ?? 'tool', status: 'completed' } }) });
+  if (event === 'subagent-start') appendEvent(database, taskId, 'log', { text: JSON.stringify({ subagent: payload.agent_type ?? payload.agent_name ?? 'subagent' }) });
+  if (event === 'subagent-stop') appendEvent(database, taskId, 'log', { text: JSON.stringify({ subagent: payload.agent_type ?? payload.agent_name ?? 'subagent', status: 'completed' }) });
+  if (event === 'session-stop') updateTask(database, taskId, 'completed', { source: 'chat', verification: [] });
+}
+
+function orchestrationContract(prompt, primaryRole) {
+  const complex = prompt.trim().length >= 80 || /build|implement|create|fix|refactor|design|test|review|migrate|deploy/i.test(prompt);
+  if (!complex) return 'Agent Harness is active. Handle this request in the current chat as ' + primaryRole + '. Use dashboard only for observation.';
+  return [
+    'Agent Harness mandatory orchestration is active for this non-trivial request.',
+    'Stay in this chat. Lead role: ' + primaryRole + '.',
+    'Before editing, spawn native subagents for independent analysis and implementation work.',
+    'Required minimum: one specialist for the primary role, tester, and code-reviewer. Add architect, security-reviewer, database-specialist, devops-engineer, or performance-engineer when relevant.',
+    'Run independent subagents in parallel. Lead agent owns integration, conflict resolution, verification, and final response.',
+    'Do not claim completion without verification evidence. Dashboard is observation only.',
+  ].join(' ');
 }
 
 function showStatus(projectPath) {
