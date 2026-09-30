@@ -2,6 +2,22 @@
 
 Local multi-agent harness for Claude Code, Codex, and Antigravity.
 
+## One Command
+
+Private repository, run from the project that should receive the harness:
+
+```bash
+gh api repos/tinhdao0503/TinhdaoLazy/contents/bootstrap.sh -H "Accept: application/vnd.github.raw+json" | bash
+```
+
+If the repository becomes public:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tinhdao0503/TinhdaoLazy/main/bootstrap.sh | bash
+```
+
+The command installs or updates the CLI, integrates the current project, starts the local control plane in the background, and prints the dashboard URL. Override target project with `AGENT_HARNESS_PROJECT` when needed.
+
 ## Constraints
 
 - ClaudeKit repository is read-only input.
