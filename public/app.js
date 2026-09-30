@@ -77,7 +77,7 @@ function renderTasks() {
   elements['task-list'].innerHTML = state.tasks.length ? state.tasks.map((task) => `
     <tr data-id="${task.id}">
       <td><span class="status ${task.status}">${task.status}</span></td>
-      <td>${escapeHtml(task.objective)}</td><td>${task.agent}</td>
+      <td>${escapeHtml(task.objective)}</td><td>${escapeHtml((task.role ?? task.agent) + ' · ' + (task.model ?? 'default'))}</td>
       <td>${new Date(task.updatedAt).toLocaleString()}</td>
       <td class="actions">${task.status === 'queued' ? '<button data-action="run">Run</button>' : ''}${task.status === 'running' ? '<button class="cancel" data-action="cancel">Cancel</button>' : ''}<button class="secondary">View</button></td>
     </tr>`).join('') : '<tr><td colspan="5" class="empty">Chưa có task</td></tr>';

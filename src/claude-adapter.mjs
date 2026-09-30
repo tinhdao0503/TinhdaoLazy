@@ -6,6 +6,8 @@ export async function executeClaude(task, options) {
   const schema = readFileSync(join(options.rootDirectory, 'schemas', 'task-result.schema.json'), 'utf8');
   const args = options.claudeArgs?.(task, schema) ?? [
     '-p',
+    '--agent', task.role,
+    '--model', task.model,
     '--output-format', 'json',
     '--json-schema', schema,
     '--permission-mode', 'acceptEdits',

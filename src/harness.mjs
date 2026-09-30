@@ -4,25 +4,30 @@ import { executeClaude } from './claude-adapter.mjs';
 import { appendEvent, getTask, saveTask, updateTask } from './database.mjs';
 import { runProcess } from './process-runner.mjs';
 import { getAgents } from './agent-registry.mjs';
-import { routeTask } from './task-router.mjs';
+import { assertModelRuntime, routeTask } from './task-router.mjs';
 
 export function submitTask(database, input) {
   if (!input.project || !input.objective) throw new Error('project and objective are required');
   const timestamp = new Date().toISOString();
-  const route = input.agent === 'auto' || !input.agent ? routeTask(input.objective, getAgents()) : { agent: input.agent, reason: 'Agent selected by operator' };
+  const route = input.agent === 'auto' || !input.agent
+    ? routeTask(input.objective, getAgents())
+    : routeTask(input.objective, getAgents().filter((agent) => agent.runtime === input.agent));
   const task = {
     id: input.id ?? `task-${randomUUID()}`,
     project: input.project,
     objective: input.objective,
     agent: route.agent,
+    role: route.role,
+    model: route.model,
     status: 'queued',
     verificationCommand: input.verificationCommand ?? null,
     createdAt: timestamp,
     updatedAt: timestamp,
   };
   if (!['codex', 'claude'].includes(task.agent)) throw new Error(`Unsupported agent: ${task.agent}`);
+  assertModelRuntime(task.agent, task.model);
   saveTask(database, task);
-  appendEvent(database, task.id, 'submitted', { agent: task.agent, routingReason: route.reason });
+  appendEvent(database, task.id, 'submitted', { agent: task.agent, role: task.role, model: task.model, routingReason: route.reason });
   return task;
 }
 
@@ -31,7 +36,7 @@ export async function runTask(database, id, options) {
   if (!task) throw new Error(`Task not found: ${id}`);
   if (task.status !== 'queued') throw new Error(`Task is not queued: ${task.status}`);
   updateTask(database, id, 'running');
-  appendEvent(database, id, 'started', { agent: task.agent });
+  appendEvent(database, id, 'started', { agent: task.agent, role: task.role, model: task.model });
   const onLog = (text) => appendEvent(database, id, 'log', { text });
 
   try {

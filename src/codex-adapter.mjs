@@ -10,6 +10,7 @@ export async function executeCodex(task, options) {
 
   const args = options.codexArgs?.(task, resultPath, schemaPath) ?? [
     'exec', '--json', '--skip-git-repo-check', '--sandbox', 'workspace-write',
+    '--model', task.model,
     '--output-schema', schemaPath, '--output-last-message', resultPath,
     '--cd', task.project, buildPrompt(task),
   ];

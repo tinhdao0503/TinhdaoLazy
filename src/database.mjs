@@ -12,6 +12,8 @@ export function openDatabase(path) {
       project TEXT NOT NULL,
       objective TEXT NOT NULL,
       agent TEXT NOT NULL,
+      role TEXT,
+      model TEXT,
       status TEXT NOT NULL,
       verification_command TEXT,
       created_at TEXT NOT NULL,
@@ -40,7 +42,14 @@ export function openDatabase(path) {
       created_at TEXT NOT NULL
     );
   `);
+  addColumn(database, 'tasks', 'role', 'TEXT');
+  addColumn(database, 'tasks', 'model', 'TEXT');
   return database;
+}
+
+function addColumn(database, table, column, type) {
+  const columns = database.prepare('PRAGMA table_info(' + table + ')').all().map((entry) => entry.name);
+  if (!columns.includes(column)) database.exec('ALTER TABLE ' + table + ' ADD COLUMN ' + column + ' ' + type);
 }
 
 export function saveProject(database, project) {
@@ -58,13 +67,15 @@ export function listProjects(database) {
 export function saveTask(database, task) {
   database.prepare(`
     INSERT INTO tasks (
-      id, project, objective, agent, status, verification_command, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      id, project, objective, agent, role, model, status, verification_command, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     task.id,
     task.project,
     task.objective,
     task.agent,
+    task.role,
+    task.model,
     task.status,
     task.verificationCommand ?? null,
     task.createdAt,
@@ -80,6 +91,8 @@ export function getTask(database, id) {
     project: row.project,
     objective: row.objective,
     agent: row.agent,
+    role: row.role,
+    model: row.model,
     status: row.status,
     verificationCommand: row.verification_command,
     createdAt: row.created_at,
@@ -100,6 +113,8 @@ export function listTasks(database) {
     project: row.project,
     objective: row.objective,
     agent: row.agent,
+    role: row.role,
+    model: row.model,
     status: row.status,
     verificationCommand: row.verification_command,
     createdAt: row.created_at,

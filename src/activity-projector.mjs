@@ -8,10 +8,12 @@ export function projectActivity(tasks, eventReader) {
       project: task.project,
       objective: task.objective,
       status: task.status,
+      role: task.role,
+      model: task.model,
       layers: [
         { id: 'supervisor', label: 'Task Supervisor', status: task.status === 'running' ? 'active' : 'waiting' },
         { id: 'router', label: 'Task Router', status: events.some((event) => event.type === 'submitted') ? 'complete' : 'waiting' },
-        { id: 'primary', label: task.agent === 'claude' ? 'Claude Code' : 'Codex', status: task.status === 'running' ? 'active' : 'waiting' },
+        { id: 'primary', label: task.role && task.model ? task.role + ' · ' + task.model : task.agent === 'claude' ? 'Claude Code' : 'Codex', status: task.status === 'running' ? 'active' : 'waiting' },
         ...children.map((label) => ({ id: `child-${label}`, label, status: 'active' })),
         { id: 'verification', label: 'Verification Gate', status: hasVerification ? 'complete' : 'waiting' },
       ],
