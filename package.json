@@ -1,0 +1,17 @@
+{
+  "name": "agent-harness-local",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agent-harness": "bin/agent-harness.mjs"
+  },
+  "scripts": {
+    "start": "node bin/agent-harness.mjs",
+    "web": "node bin/agent-harness.mjs serve",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
