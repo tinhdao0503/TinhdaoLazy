@@ -47,8 +47,8 @@ test('installs project config, hooks, MCP, and instructions with one command', (
   assert.match(hook.stdout, /mandatory orchestration/);
 
   for (const [event, payload] of [
-    ['subagent-start', { session_id: 'session-test', cwd: project, agent_type: 'tester' }],
-    ['post-tool-use', { session_id: 'session-test', cwd: project, tool_name: 'Bash' }],
+    ['subagent-start', { session_id: 'session-test', cwd: project, agent_id: 'child-1', agent_type: 'Explore' }],
+    ['post-tool-use', { session_id: 'session-test', cwd: project, agent_id: 'child-1', agent_type: 'Explore', tool_name: 'Bash' }],
     ['session-stop', { session_id: 'session-test', cwd: project }],
   ]) {
     const lifecycle = spawnSync(process.execPath, [cli, 'hook', event], {
@@ -58,10 +58,45 @@ test('installs project config, hooks, MCP, and instructions with one command', (
   }
 
   const database = openDatabase(join(home, 'harness.db'));
-  const [task] = listTasks(database);
+  let [task] = listTasks(database);
+  assert.equal(task.status, 'running');
+  const stopped = spawnSync(process.execPath, [cli, 'hook', 'subagent-stop'], {
+    encoding: 'utf8', input: JSON.stringify({ session_id: 'session-test', cwd: project, agent_id: 'child-1', agent_type: 'Explore' }),
+    cwd: project, env: { ...process.env, AGENT_HARNESS_HOME: home },
+  });
+  assert.equal(stopped.status, 0, stopped.stderr);
+  [task] = listTasks(database);
   assert.equal(task.status, 'completed');
   assert.equal(task.role, 'security-reviewer');
   assert.equal(task.agent, 'claude');
   assert.ok(listEvents(database, task.id).some((event) => event.type === 'subagent-start'));
+  assert.ok(listEvents(database, task.id).some((event) => event.type === 'lead-stopped'));
+  assert.equal(listEvents(database, task.id).find((event) => event.type === 'subagent-start').payload.agent, 'researcher');
   assert.ok(listEvents(database, task.id).some((event) => event.type === 'log'));
+});
+
+test('keeps late child events attached to their original chat task', () => {
+  const root = mkdtempSync(join(tmpdir(), 'agent-harness-overlap-'));
+  const project = join(root, 'project');
+  const home = join(root, 'home');
+  spawnSync(process.execPath, ['-e', `require('node:fs').mkdirSync(${JSON.stringify(project)}, {recursive:true})`]);
+  const runHook = (event, payload) => spawnSync(process.execPath, [cli, 'hook', event], {
+    encoding: 'utf8', input: JSON.stringify({ session_id: 'shared-session', cwd: project, ...payload }),
+    cwd: project, env: { ...process.env, AGENT_HARNESS_HOME: home },
+  });
+
+  assert.equal(runHook('user-prompt', { prompt: 'Research the existing architecture before implementation' }).status, 0);
+  assert.equal(runHook('subagent-start', { agent_id: 'late-child', agent_type: 'Explore' }).status, 0);
+  assert.equal(runHook('session-stop', {}).status, 0);
+  assert.equal(runHook('user-prompt', { prompt: 'Implement the approved design' }).status, 0);
+  assert.equal(runHook('subagent-stop', { agent_id: 'late-child', agent_type: 'Explore' }).status, 0);
+
+  const database = openDatabase(join(home, 'harness.db'));
+  const tasks = listTasks(database);
+  const first = tasks.find((entry) => entry.objective.startsWith('Research'));
+  const second = tasks.find((entry) => entry.objective.startsWith('Implement'));
+  assert.equal(first.status, 'completed');
+  assert.equal(second.status, 'running');
+  assert.ok(listEvents(database, first.id).some((event) => event.type === 'subagent-stop'));
+  assert.ok(!listEvents(database, second.id).some((event) => event.type === 'subagent-stop'));
 });

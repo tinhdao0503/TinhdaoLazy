@@ -48,6 +48,15 @@ export function openDatabase(path) {
       updated_at TEXT NOT NULL,
       FOREIGN KEY(task_id) REFERENCES tasks(id)
     );
+    CREATE TABLE IF NOT EXISTS child_agents (
+      agent_id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      status TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      stopped_at TEXT,
+      FOREIGN KEY(task_id) REFERENCES tasks(id)
+    );
   `);
   addColumn(database, 'tasks', 'role', 'TEXT');
   addColumn(database, 'tasks', 'model', 'TEXT');
@@ -156,6 +165,32 @@ export function bindChatSession(database, sessionId, taskId, project) {
 
 export function getChatSessionTask(database, sessionId) {
   return database.prepare('SELECT task_id FROM chat_sessions WHERE session_id = ?').get(sessionId)?.task_id ?? null;
+}
+
+export function startChildAgent(database, agentId, taskId, role) {
+  database.prepare(`
+    INSERT INTO child_agents (agent_id, task_id, role, status, started_at, stopped_at)
+    VALUES (?, ?, ?, 'running', ?, NULL)
+    ON CONFLICT(agent_id) DO UPDATE SET task_id = excluded.task_id, role = excluded.role,
+      status = 'running', started_at = excluded.started_at, stopped_at = NULL
+  `).run(agentId, taskId, role, new Date().toISOString());
+}
+
+export function stopChildAgent(database, agentId) {
+  database.prepare(`UPDATE child_agents SET status = 'completed', stopped_at = ? WHERE agent_id = ?`)
+    .run(new Date().toISOString(), agentId);
+}
+
+export function getChildAgentTask(database, agentId) {
+  return database.prepare('SELECT task_id FROM child_agents WHERE agent_id = ?').get(agentId)?.task_id ?? null;
+}
+
+export function countRunningChildAgents(database, taskId) {
+  return database.prepare("SELECT COUNT(*) AS count FROM child_agents WHERE task_id = ? AND status = 'running'").get(taskId).count;
+}
+
+export function hasEvent(database, taskId, type) {
+  return Boolean(database.prepare('SELECT 1 FROM events WHERE task_id = ? AND type = ? LIMIT 1').get(taskId, type));
 }
 
 export function listEvents(database, taskId) {

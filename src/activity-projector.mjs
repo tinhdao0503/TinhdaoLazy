@@ -63,8 +63,9 @@ function projectChildren(events) {
           continue;
         }
         const label = item.agent_name ?? item.subagent;
-        if (label) nodes.set('agent-' + label, {
-          id: 'agent-' + label, type: 'agent', label: String(label), status: 'active', meta: 'runtime child', children: [],
+        const agentKey = item.agent_id ?? label;
+        if (label) nodes.set('agent-' + agentKey, {
+          id: 'agent-' + agentKey, type: 'agent', label: String(label), status: item.status === 'completed' ? 'complete' : 'active', meta: item.agent_id ?? 'runtime child', children: [],
         });
         const tool = item.tool_name ?? item.tool;
         if (tool && tool !== 'spawn_agent') nodes.set('tool-' + tool, {

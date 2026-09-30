@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { resolve } from 'node:path';
-import { appendEvent, bindChatSession, getChatSessionTask, openDatabase, saveTask, updateTask } from '../src/database.mjs';
+import { appendEvent, bindChatSession, countRunningChildAgents, getChatSessionTask, getChildAgentTask, hasEvent, openDatabase, saveTask, startChildAgent, stopChildAgent, updateTask } from '../src/database.mjs';
 import { listProjects } from '../src/project-registry.mjs';
 import { installProject } from '../src/project-installer.mjs';
 import { selectRole } from '../src/task-router.mjs';
@@ -65,7 +65,7 @@ function parsePayload(payload) {
 
 function startChatTask(database, sessionId, project, payload) {
   const previous = getChatSessionTask(database, sessionId);
-  if (previous) updateTask(database, previous, 'completed', { source: 'chat', reason: 'Superseded by next prompt' });
+  if (previous && countRunningChildAgents(database, previous) === 0) updateTask(database, previous, 'completed', { source: 'chat', reason: 'Superseded by next prompt' });
   const timestamp = new Date().toISOString();
   const role = selectRole(payload.prompt ?? '');
   const rawModel = payload.model ?? 'claude-sonnet-5';
@@ -78,13 +78,37 @@ function startChatTask(database, sessionId, project, payload) {
 }
 
 function recordChatLifecycle(database, sessionId, event, payload) {
-  const taskId = getChatSessionTask(database, sessionId);
+  const agentId = payload.agent_id ?? payload.agentId;
+  const taskId = agentId ? getChildAgentTask(database, agentId) ?? getChatSessionTask(database, sessionId) : getChatSessionTask(database, sessionId);
   if (!taskId) return;
-  appendEvent(database, taskId, event, { tool: payload.tool_name, agent: payload.agent_type ?? payload.agent_name, status: payload.status });
+  const role = normalizeChildRole(payload.agent_type ?? payload.agent_name);
+  appendEvent(database, taskId, event, { tool: payload.tool_name, agent: role, agentId, status: payload.status });
   if (event === 'post-tool-use') appendEvent(database, taskId, 'log', { text: JSON.stringify({ item: { type: 'command_execution', command: payload.tool_name ?? 'tool', status: 'completed' } }) });
-  if (event === 'subagent-start') appendEvent(database, taskId, 'log', { text: JSON.stringify({ subagent: payload.agent_type ?? payload.agent_name ?? 'subagent' }) });
-  if (event === 'subagent-stop') appendEvent(database, taskId, 'log', { text: JSON.stringify({ subagent: payload.agent_type ?? payload.agent_name ?? 'subagent', status: 'completed' }) });
-  if (event === 'session-stop') updateTask(database, taskId, 'completed', { source: 'chat', verification: [] });
+  if (event === 'subagent-start') {
+    startChildAgent(database, agentId ?? taskId + ':' + role, taskId, role);
+    appendEvent(database, taskId, 'log', { text: JSON.stringify({ agent_id: agentId, subagent: role }) });
+  }
+  if (event === 'subagent-stop') {
+    if (agentId) stopChildAgent(database, agentId);
+    appendEvent(database, taskId, 'log', { text: JSON.stringify({ agent_id: agentId, subagent: role, status: 'completed' }) });
+    completeStoppedTask(database, taskId);
+  }
+  if (event === 'session-stop') {
+    appendEvent(database, taskId, 'lead-stopped', { runningChildAgents: countRunningChildAgents(database, taskId) });
+    completeStoppedTask(database, taskId);
+  }
+}
+
+function completeStoppedTask(database, taskId) {
+  if (hasEvent(database, taskId, 'lead-stopped') && countRunningChildAgents(database, taskId) === 0) {
+    updateTask(database, taskId, 'completed', { source: 'chat', verification: [] });
+  }
+}
+
+function normalizeChildRole(value) {
+  if (!value) return 'subagent';
+  const role = String(value).toLowerCase();
+  return { explore: 'researcher', plan: 'planner', 'general-purpose': 'fullstack-developer' }[role] ?? role;
 }
 
 function orchestrationContract(prompt, primaryRole) {
